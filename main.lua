@@ -1,57 +1,68 @@
 
-function love.load()
+function love.load()                                                  -- LOAD LOAD LOAD
   debug = true                                                        -- this time I am logging everything
-  SCREEN = {}
+  SCREEN = {}                                                         -- dont change these things... yet
   SCREEN.WIDTH, SCREEN.HEIGHT, SCREEN.FLAGS = love.window.getMode()
-  if debug then
-    print("Screen Setup")
-    print(SCREEN.WIDTH .. ' ' .. SCREEN.HEIGHT)
-  end
+  SESSION = {}
+  SESSION.time = 0
+  -- if debug then
+  --   print("Screen Setup")
+  --   print(SCREEN.WIDTH .. ' ' .. SCREEN.HEIGHT)
+  -- end
   layout = newLayout()
   user = newUser()
-  canvas = newCanvas(50, 50)
+  canvas = newCanvas(20, 20)
   print('hi')
 end
 
--- function love.update(dt)
---   if love.mouse.isGrabbed then
---   end
--- end
-
-function love.draw()
-  if debug then
-    love.graphics.print('Hello World!', 400, 300)
+function love.update(dt)                                              -- UPDATE UPDATE UPDATE
+  SESSION.time = SESSION.time + dt
+  if love.mouse.isGrabbed then
+    user.x = love.mouse.getX()
+    user.y = love.mouse.getY()
+    for i, button in ipairs(canvas.pixels.buttons) do
+      if user.x <= button.x.max and user.y <= button.y.max and user.x >= button.x.min and user.y >= button.y.min then
+        if debug then
+          print('The Cursor Is HERE!')
+          print(button.x.min .. ' ' .. user.x .. ' ' .. button.x.max)
+          print(button.y.min .. ' ' .. user.y ..' ' .. button.y.max)
+        end
+        button.color = user.color1
+      end
+    end
+    -- canvas.pixels.buttons = newCanvas
   end
+end
+
+function love.draw()                                                  -- DRAW DRAW DRAW
   love.graphics.setColor(user.color2)
   love.graphics.rectangle("fill", layout.grid.x.min, layout.grid.y.min, layout.grid.dim, layout.grid.dim)
   for i, button in ipairs(canvas.pixels.buttons) do
-    -- love.graphics.setColor(button.color)
-    love.graphics.setColor({255 * math.sin(i), 255 * math.cos(i), 255 * math.tan(i)})
+    love.graphics.setColor(button.color)
     love.graphics.rectangle("fill", button.x.min, button.y.min, button.width, button.height)
   end
 end
 
 function newUser()
   local user = {}
-  user.color = {255, 255, 0, 255}
-  user.color2 = {255, 0, 255, 255}
+  user.color1 = {100, 250, 100, 255}
+  user.color2 = {90, 110, 255, 255}
+  user.x = 0
+  user.y = 0
   return user
 end
 
-function newButton(x, y, height, width, color, border)
+function newButton(x, y, height, width, color)
   local button = {}
   button.color = color
-  button.border = border
   button.width = width
   button.height = height
   button.x = {}
-  button.x.tab = width * border
-  button.x.min = x + button.x.tab
-  button.x.max = x + width - button.x.tab
+  button.x.min = x
+  button.x.max = x + width
   button.y = {}
-  button.y.tab = height * border
-  button.y.min = y + button.y.tab
-  button.y.max = y + height - button.y.tab
+  button.y.min = y
+  button.y.max = y + height
   button.value = false
   -- if debug then
   --   print('New Button')
@@ -79,10 +90,9 @@ function newCanvas(xResolution, yResolution)
   canvas.pixels.buttons = {}
   for j = 0, canvas.y.resolution - 1 do
     for i = 0, canvas.x.resolution - 1 do
-      print(j)
-      local buttonx = i * canvas.pixels.width + layout.grid.x.min - canvas.pixels.width
-      local buttony = j * canvas.pixels.height + layout.grid.y.min - canvas.pixels.height
-          local button = newButton(buttonx, buttony, canvas.pixels.height, canvas.pixels.width, user.color, 1)
+      local buttonx = i * canvas.pixels.width + layout.grid.x.min
+      local buttony = j * canvas.pixels.height + layout.grid.y.min
+          local button = newButton(buttonx, buttony, canvas.pixels.height, canvas.pixels.width, user.color2)
           table.insert(canvas.pixels.buttons, button)
     end
   end
@@ -94,7 +104,6 @@ function newCanvas(xResolution, yResolution)
   --     print(button.y.min .. ' ' .. button.y.max)
   --   end
   -- end
-
   return canvas
 end
 
