@@ -1,4 +1,3 @@
-range = require("range")
 
 function love.load()
   debug = true                                                        -- this time I am logging everything
@@ -10,7 +9,7 @@ function love.load()
   end
   layout = newLayout()
   user = newUser()
-  canvas = newCanvas(2, 2)
+  canvas = newCanvas(50, 50)
   print('hi')
 end
 
@@ -27,7 +26,7 @@ function love.draw()
   love.graphics.rectangle("fill", layout.grid.x.min, layout.grid.y.min, layout.grid.dim, layout.grid.dim)
   for i, button in ipairs(canvas.pixels.buttons) do
     -- love.graphics.setColor(button.color)
-    love.graphics.setColor({255/(i*2), 0 + i*9, 255, 255})
+    love.graphics.setColor({255 * math.sin(i), 255 * math.cos(i), 255 * math.tan(i)})
     love.graphics.rectangle("fill", button.x.min, button.y.min, button.width, button.height)
   end
 end
@@ -54,11 +53,11 @@ function newButton(x, y, height, width, color, border)
   button.y.min = y + button.y.tab
   button.y.max = y + height - button.y.tab
   button.value = false
-  if debug then
-    print('New Button')
-    print(button.x.min .. ' ' .. button.x.max)
-    print(button.y.min .. ' ' .. button.y.max)
-  end
+  -- if debug then
+  --   print('New Button')
+  --   print(button.x.min .. ' ' .. button.x.max)
+  --   print(button.y.min .. ' ' .. button.y.max)
+  -- end
   return button
 end
 
@@ -72,34 +71,29 @@ function newCanvas(xResolution, yResolution)
   canvas.pixels = {}                                -- fake pixels = fauxils?
   canvas.pixels.width = layout.grid.dim / xResolution
   canvas.pixels.height = layout.grid.dim / yResolution
+  -- if debug then
+  --   print("Pixel Info")
+  --   print("Grid Side " .. layout.grid.dim)
+  --   print(canvas.pixels.width .. ' ' .. canvas.pixels.height)
+  -- end
   canvas.pixels.buttons = {}
-  local x_thresh = layout.grid.x.min
-  local y_thresh = layout.grid.y.min
-  -- for j = layout.grid.y.min, layout.grid.y.max do
-  --   for i = layout.grid.x.min, layout.grid.x.max do
-  --     if math.mod(i, canvas.pixels.width) < 1 and math.mod(j, canvas.pixels.height) < 1 then
-  --       x_thresh = i + canvas.pixels.width
-  --       y_thresh = i + canvas.pixels.height
-  --       local button = newButton(i, j, canvas.pixels.height, canvas.pixels.width, user.color, 0.5)
-  --       table.insert(canvas.pixels.buttons, button)
-  --     end
+  for j = 0, canvas.y.resolution - 1 do
+    for i = 0, canvas.x.resolution - 1 do
+      print(j)
+      local buttonx = i * canvas.pixels.width + layout.grid.x.min - canvas.pixels.width
+      local buttony = j * canvas.pixels.height + layout.grid.y.min - canvas.pixels.height
+          local button = newButton(buttonx, buttony, canvas.pixels.height, canvas.pixels.width, user.color, 1)
+          table.insert(canvas.pixels.buttons, button)
+    end
+  end
+  -- if debug then
+  --   print('Pixels')
+  --   print(canvas.pixels.width .. ' ' .. canvas.pixels.height)
+  --   for i, button in ipairs(canvas.pixels.buttons) do
+  --     print(button.x.min .. ' ' .. button.x.max)
+  --     print(button.y.min .. ' ' .. button.y.max)
   --   end
   -- end
-  for j in range(layout.grid.y.min, layout.grid.y.max, canvas.y.resolution) do
-    for i in range(layout.grid.x.min, layout.grid.x.max, canvas.x.resolution) do
-      local button = newButton(i, j, canvas.pixels.height, canvas.pixels.width, user.color, 0.5)
-      table.insert(canvas.pixels.buttons, button)
-    end
-  end
-
-  if debug then
-    print('Pixels')
-    print(canvas.pixels.width .. ' ' .. canvas.pixels.height)
-    for i, button in ipairs(canvas.pixels.buttons) do
-      print(button.x.min .. ' ' .. button.x.max)
-      print(button.y.min .. ' ' .. button.y.max)
-    end
-  end
 
   return canvas
 end
@@ -118,31 +112,10 @@ function newLayout()
   layout.grid.y.min = layout.tab
   layout.grid.y.max = SCREEN.HEIGHT - layout.tab
   layout.grid.dim = layout.grid.x.max - layout.grid.x.min          -- get width of bordered grid
-  if debug then
-    print("Setup Grid")
-    print(layout.grid.x.min .. " " .. layout.grid.x.max)
-    print(layout.grid.y.min .. " " .. layout.grid.y.max)
-  end
+  -- if debug then
+  --   print("Setup Grid")
+  --   print(layout.grid.x.min .. " " .. layout.grid.x.max)
+  --   print(layout.grid.y.min .. " " .. layout.grid.y.max)
+  -- end
   return layout
-end
-
-function range(a, b, step)
-  if not b then
-    b = a
-    a = 1
-  end
-  step = step or 1
-  local f =
-    step > 0 and
-      function(_, lastvalue)
-        local nextvalue = lastvalue + step
-        if nextvalue <= b then return nextvalue end
-      end or
-    step < 0 and
-      function(_, lastvalue)
-        local nextvalue = lastvalue + step
-        if nextvalue >= b then return nextvalue end
-      end or
-      function(_, lastvalue) return lastvalue end
-  return f, nil, a - step
 end
