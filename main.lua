@@ -11,7 +11,8 @@ function love.load()                                                  -- LOAD LO
   -- end
   layout = newLayout()
   user = newUser()
-  canvas = newCanvas(20, 20)
+  canvas = newCanvas(50, 50)
+  love.graphics.setBackgroundColor(layout.background.color)
   print('hi')
 end
 
@@ -20,21 +21,23 @@ function love.update(dt)                                              -- UPDATE 
   if love.mouse.isGrabbed then
     user.x = love.mouse.getX()
     user.y = love.mouse.getY()
-    for i, button in ipairs(canvas.pixels.buttons) do
-      if user.x <= button.x.max and user.y <= button.y.max and user.x >= button.x.min and user.y >= button.y.min then
-        if debug then
-          print('The Cursor Is HERE!')
-          print(button.x.min .. ' ' .. user.x .. ' ' .. button.x.max)
-          print(button.y.min .. ' ' .. user.y ..' ' .. button.y.max)
+    if love.mouse.isDown('l') then
+      for i, button in ipairs(canvas.pixels.buttons) do
+        if user.x <= button.x.max and user.y <= button.y.max and user.x >= button.x.min and user.y >= button.y.min then
+          -- if debug then
+          --   print('The Cursor Is HERE!')
+          --   print(button.x.min .. ' ' .. user.x .. ' ' .. button.x.max)
+          --   print(button.y.min .. ' ' .. user.y ..' ' .. button.y.max)
+          -- end
+          button.color = user.color1
         end
-        button.color = user.color1
       end
     end
-    -- canvas.pixels.buttons = newCanvas
   end
 end
 
 function love.draw()                                                  -- DRAW DRAW DRAW
+
   love.graphics.setColor(user.color2)
   love.graphics.rectangle("fill", layout.grid.x.min, layout.grid.y.min, layout.grid.dim, layout.grid.dim)
   for i, button in ipairs(canvas.pixels.buttons) do
@@ -121,6 +124,8 @@ function newLayout()
   layout.grid.y.min = layout.tab
   layout.grid.y.max = SCREEN.HEIGHT - layout.tab
   layout.grid.dim = layout.grid.x.max - layout.grid.x.min          -- get width of bordered grid
+  layout.background = {}
+  layout.background.color = {200, 200, 200, 200}
   -- if debug then
   --   print("Setup Grid")
   --   print(layout.grid.x.min .. " " .. layout.grid.x.max)
