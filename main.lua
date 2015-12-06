@@ -1,13 +1,8 @@
 -- Tonight:
--- Background Color Picker
--- Brush Color Picker *
--- Eraser
--- Clear Screen
 -- Set Resolution
--- Set Brush Size
+-- Set Frame Rate
 --
 -- Stretch Goals
--- Different Shaped Brushes
 -- Stroke Interpolation
 
 function love.load()
@@ -23,7 +18,7 @@ function love.load()
   smallFont = love.graphics.newFont(20)
   layout = newLayout()
   user = newUser()
-  canvas = newButtonArray(20, 20, layout.canvas)
+  canvas = newButtonArray(100, 100, layout.canvas)
   palette = newPalette()
   love.graphics.setBackgroundColor(layout.background.color)
   -- TEXT MENU
@@ -32,7 +27,14 @@ function love.load()
   guideButton.debounceLatch = 0
   golButton = newButton(layout.tab, guideButton.y.max, layout.palette.dim / 5, layout.palette.dim, {255, 255, 255, 255})
   golButton.debounceLatch = 0
+  rainButton = newButton(layout.tab, golButton.y.max, layout.palette.dim / 5, layout.palette.dim, {255, 255, 255, 255})
+  rainButton.debounceLatch = 0
+  frameUpButton = newButton(layout.tab, rainButton.y.max, layout.palette.dim / 5, layout.palette.dim, {255, 255, 255, 255})
+  frameUpButton.debounceLatch = 0
+  frameDownButton = newButton(layout.tab, frameUpButton.y.max, layout.palette.dim / 5, layout.palette.dim, {255, 255, 255, 255})
+  frameDownButton.debounceLatch = 0
   gameoflife = {}
+  gameoflife.solid = true
   gameoflife.toggle = false
   gameoflife.update = 0
   print('hi')
@@ -78,6 +80,34 @@ function love.update(dt)                                              -- UPDATE 
       if guideButton.debounceLatch < session.time then
         guideButton.debounceLatch = session.time
       end
+      -- TOGGLE RAINBUTTON
+      if user.x <= rainButton.x.max and user.y <= rainButton.y.max and user.x >= rainButton.x.min and user.y >= rainButton.y.min and session.time > rainButton.debounceLatch then
+        gameoflife.solid = not gameoflife.solid
+        rainButton.debounceLatch = session.time + 0.2
+      end
+      if rainButton.debounceLatch < session.time then
+        rainButton.debounceLatch = session.time
+      end
+      -- FRAME RATE DOWN
+      if user.x <= frameDownButton.x.max and user.y <= frameDownButton.y.max and user.x >= frameDownButton.x.min and user.y >= frameDownButton.y.min and session.time > frameDownButton.debounceLatch then
+        frameDownButton.debounceLatch = session.time + 0.2
+        if user.fps > 0.6 then
+          user.fps = user.fps - 0.5
+        end
+      end
+      if frameDownButton.debounceLatch < session.time then
+        frameDownButton.debounceLatch = session.time
+      end
+      -- FRAME RATE UP
+      if user.x <= frameUpButton.x.max and user.y <= frameUpButton.y.max and user.x >= frameUpButton.x.min and user.y >= frameUpButton.y.min and session.time > frameUpButton.debounceLatch then
+        if user.fps < 10 then
+          user.fps = user.fps + 0.5
+        end
+        frameUpButton.debounceLatch = session.time + 0.2
+      end
+      if frameUpButton.debounceLatch < session.time then
+        frameUpButton.debounceLatch = session.time
+      end
       -- TOGGLE GAME OF LIFE
       if user.x <= golButton.x.max and user.y <= golButton.y.max and user.x >= golButton.x.min and user.y >= golButton.y.min and session.time > golButton.debounceLatch then
         gameoflife.toggle = not gameoflife.toggle
@@ -85,7 +115,6 @@ function love.update(dt)                                              -- UPDATE 
           gameoflife.update = session.time + 1/user.fps
         end
         golButton.debounceLatch = session.time + 0.2
-
       end
       if golButton.debounceLatch < session.time then
         golButton.debounceLatch = session.time
@@ -100,7 +129,7 @@ function love.update(dt)                                              -- UPDATE 
       for i, button in ipairs(canvas.pixels.buttons) do
         local count = countNeighbours(i, canvas)
         neighbourCount = count.neighbourCount
-        neighbourColors = count.neighbourColors
+        neighbourColors = count.neighbourColor
         if button.state.current == 1 and neighbourCount < 2 then
           button.state.future = 0
         elseif button.state.current == 1 and neighbourCount > 3 then
@@ -109,34 +138,21 @@ function love.update(dt)                                              -- UPDATE 
         if button.state.current == 0 and neighbourCount == 3 then
           button.state.future = 1
         end
-      end
-      -- ADD COLORS
-      newColor = user.color.active
-      for i, color in ipairs(neighbourColors) do
-        print(i)
-        for j = 1, 4 do
-          print(newColor[j])
-          -- newColor[j] = newColor[j] + color[j]
-        end
-      end
-
-      -- UPDATE CELL STATES
-      for i, button in ipairs(canvas.pixels.buttons) do
-        button.state.current = button.state.future
-      end
-      -- UPDATE CELL COLOR
-      for i, button in ipairs(canvas.pixels.buttons) do
         if button.state.current == 1 then
+          if gameoflife.solid == true then
+            newColor = user.color.active
+          else
+            newColor = neighbourColors
+          end
           button.color = newColor
-          -- if not button.color == user.color.disactive then
-          --   button.color = button.color
-          -- else
-          --   button.color = user.color.active
-          -- end
         end
         if button.state.current == 0 then
           button.color = user.color.disactive
         end
+      end
+      -- UPDATE CELL STATES
+      for i, button in ipairs(canvas.pixels.buttons) do
+        button.state.current = button.state.future
       end
     end
   end
@@ -168,20 +184,27 @@ function love.draw()                                                  -- DRAW DR
    else
      love.graphics.printf("PLAY", golButton.x.min + layout.tab, golButton.y.min + layout.tab, golButton.width, 'left')
    end
+   if gameoflife.solid then
+    love.graphics.printf("LIQUID", rainButton.x.min + layout.tab, rainButton.y.min + layout.tab, rainButton.width, 'left')
+  else
+    love.graphics.printf("SOLID", rainButton.x.min + layout.tab, rainButton.y.min + layout.tab, rainButton.width, 'left')
+  end
+  love.graphics.printf("FPS +", frameUpButton.x.min + layout.tab, frameUpButton.y.min + layout.tab, frameUpButton.width, 'left')
+  love.graphics.printf("FPS -", frameDownButton.x.min + layout.tab, frameDownButton.y.min + layout.tab, frameDownButton.width, 'left')
 end
 
-function countNeighbours(i, buttonArray)
+function countNeighbours(address, buttonArray)
   neighbourIndex = {}
   local neighbours = {}
   local neighbourCount = 0
-  table.insert(neighbourIndex, i + 1)
-  table.insert(neighbourIndex, i - 1)
-  table.insert(neighbourIndex, i + buttonArray.x.resolution)
-  table.insert(neighbourIndex, i + buttonArray.x.resolution - 1)
-  table.insert(neighbourIndex, i + buttonArray.x.resolution + 1)
-  table.insert(neighbourIndex, i - buttonArray.x.resolution)
-  table.insert(neighbourIndex, i - buttonArray.x.resolution - 1)
-  table.insert(neighbourIndex, i - buttonArray.x.resolution + 1)
+  table.insert(neighbourIndex, address + 1)
+  table.insert(neighbourIndex, address - 1)
+  table.insert(neighbourIndex, address + buttonArray.x.resolution)
+  table.insert(neighbourIndex, address + buttonArray.x.resolution - 1)
+  table.insert(neighbourIndex, address + buttonArray.x.resolution + 1)
+  table.insert(neighbourIndex, address - buttonArray.x.resolution)
+  table.insert(neighbourIndex, address - buttonArray.x.resolution - 1)
+  table.insert(neighbourIndex, address - buttonArray.x.resolution + 1)
   if user.toroid then
     for i, index in ipairs(neighbourIndex) do
       if index < 0 then
@@ -192,16 +215,38 @@ function countNeighbours(i, buttonArray)
       table.insert(neighbours, buttonArray.pixels.buttons[index])
     end
   end
-  local neighbourColors = {}
+  local r = 0
+  local g = 0
+  local b = 0
   for i, neighbour in ipairs(neighbours) do
     if neighbour.state.current == 1 then
       neighbourCount = neighbourCount + 1
-      table.insert(neighbourColors, neighbour.color)
+      r = r + neighbour.color[1]
+      g = g + neighbour.color[2]
+      b = b + neighbour.color[3]
     end
   end
-  local count = {}                                                           -- TODO learn / fix return
+  r = r + buttonArray.pixels.buttons[address].color[1]
+  g = g + buttonArray.pixels.buttons[address].color[2]
+  b = b + buttonArray.pixels.buttons[address].color[3]
+  r = math.mod(r, 255)
+  g = math.mod(g, 255)
+  b = math.mod(b, 255)
+  if (r == 0 and g == 0 and b == 0) or (r == 255 and g == 255 and b == 255) then
+    r = math.sin(buttonArray.pixels.buttons[address].x.min)*255
+    g = math.cos(buttonArray.pixels.buttons[address].x.min)*255
+    b = buttonArray.pixels.buttons[address].y.min
+  end
+  -- print('RED')
+  -- print(r)
+  -- print('GREEN')
+  -- print(g)
+  -- print('BLUE')
+  -- print(b)
+
+  local count = {}
   count.neighbourCount = neighbourCount
-  count.neighbourColors = neighbourColors
+  count.neighbourColor = {r, g, b, 255}
   return count
 end
 
@@ -213,7 +258,8 @@ end
 function newPalette()
   local palette = newButtonArray(8, 8, layout.palette)
   for i, button in ipairs(palette.pixels.buttons) do                   -- Draw the palette (Painting area thing)
-    button.color = {(math.floor(8 * math.random()) * 255 / 8), (math.floor(8 * math.random()) * 255 / 8), (math.floor(8 * math.random()) * 255 / 8), 255}
+    button.color = {math.random() * 255, math.random() * 255, math.random() * 255, 255}
+    -- button.color = {(math.floor(8 * math.random()) * 255 / 8), (math.floor(8 * math.random()) * 255 / 8), (math.floor(8 * math.random()) * 255 / 8), 255}
     if i == 1 then
       button.color = {255, 255, 255, 255}
     elseif i == 2 then
