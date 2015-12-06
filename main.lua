@@ -43,6 +43,8 @@ end
 function love.update(dt)                                              -- UPDATE UPDATE UPDATE
   session.time = session.time + dt
   if love.mouse.isGrabbed then                                        -- mouse moved callback doesnt give any better resolution
+    user.previousx = user.x
+    user.previousy = user.y
     user.x = love.mouse.getX()
     user.y = love.mouse.getY()
     if love.mouse.isDown('l') then
@@ -122,7 +124,7 @@ function love.update(dt)                                              -- UPDATE 
     end
   end
   -- GAME OF LIFE
-  if gameoflife.toggle then
+  if gameoflife.toggle  and not love.mouse.isDown('l') then
     if session.time > gameoflife.update then
       gameoflife.update = session.time + 1/user.fps
       -- GAME OF LIFE LOGIC
@@ -218,6 +220,7 @@ function countNeighbours(address, buttonArray)
   local r = 0
   local g = 0
   local b = 0
+  local count = {}
   for i, neighbour in ipairs(neighbours) do
     if neighbour.state.current == 1 then
       neighbourCount = neighbourCount + 1
@@ -237,14 +240,6 @@ function countNeighbours(address, buttonArray)
     g = math.cos(buttonArray.pixels.buttons[address].x.min)*255
     b = buttonArray.pixels.buttons[address].y.min
   end
-  -- print('RED')
-  -- print(r)
-  -- print('GREEN')
-  -- print(g)
-  -- print('BLUE')
-  -- print(b)
-
-  local count = {}
   count.neighbourCount = neighbourCount
   count.neighbourColor = {r, g, b, 255}
   return count
@@ -286,10 +281,10 @@ function newUser()
   user.toroid = true
   user.color = {}
   user.color.active = {100, 250, 100, 255}
-  user.color.disactive = {255, 255, 255, 255}
+  user.color.disactive = {0, 0, 0, 255}
   user.x = 0
   user.y = 0
-  user.guides = true
+  user.guides = false
   user.fps = 5
   return user
 end
