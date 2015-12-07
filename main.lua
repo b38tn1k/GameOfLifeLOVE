@@ -1,9 +1,10 @@
--- Tonight:
--- Set Resolution
--- Set Frame Rate
---
--- Stretch Goals
+-- Goals
+-- Colors!
+-- Set Field Resolution
+-- Set Square / toroid
+-- Set Brush Size
 -- Stroke Interpolation
+-- Presets / Load / Save
 
 function love.load()
   math.randomseed(os.time())                                                -- LOAD LOAD LOAD
@@ -129,9 +130,7 @@ function love.update(dt)                                              -- UPDATE 
       gameoflife.update = session.time + 1/user.fps
       -- GAME OF LIFE LOGIC
       for i, button in ipairs(canvas.pixels.buttons) do
-        local count = countNeighbours(i, canvas)
-        neighbourCount = count.neighbourCount
-        neighbourColors = count.neighbourColor
+        local neighbourCount = countActiveNeighbours(i, canvas)
         if button.state.current == 1 and neighbourCount < 2 then
           button.state.future = 0
         elseif button.state.current == 1 and neighbourCount > 3 then
@@ -140,32 +139,34 @@ function love.update(dt)                                              -- UPDATE 
         if button.state.current == 0 and neighbourCount == 3 then
           button.state.future = 1
         end
-        if button.state.current == 1 then
-          if gameoflife.solid == true then
-            newColor = user.color.active
-          else
-            newColor = neighbourColors
-          end
-          button.color = newColor
-        end
-        if button.state.current == 0 then
-          button.color = user.color.disactive
-        end
       end
       -- UPDATE CELL STATES
       for i, button in ipairs(canvas.pixels.buttons) do
         button.state.current = button.state.future
+        if button.state.current == 1 then
+          button.visited = true
+          button.color = user.color.active
+        end
       end
     end
   end
 end
 
 function love.draw()                                                  -- DRAW DRAW DRAW
-
   love.graphics.setColor(user.color.disactive)
   love.graphics.rectangle("fill", layout.canvas.x.min, layout.canvas.y.min, layout.canvas.dim, layout.canvas.dim)
   for i, button in ipairs(canvas.pixels.buttons) do                   -- Draw the Canvas (Painting area thing)
     love.graphics.setColor(button.color)
+    if button.state.current == 0 and gameoflife.solid then
+      love.graphics.setColor(user.color.disactive)
+    elseif button.state.current == 0 and not button.visited then
+      love.graphics.setColor(user.color.disactive)
+    end
+    if not gameoflife.solid and button.state.current == 1 then
+      button.color  = {255*math.sin(session.time / 20), 255*math.cos(session.time / 20),(255 - 255*math.sin(session.time / 20) + 0.5),255}
+      love.graphics.setColor(button.color)
+      love.graphics.setColor(InverseColor(button.color))
+    end
     love.graphics.rectangle("fill", button.x.min, button.y.min, button.width, button.height)
     if user.guides then                                               -- Add little dots to show square placement
       love.graphics.setColor(InverseColor(button.color))
@@ -187,62 +188,68 @@ function love.draw()                                                  -- DRAW DR
      love.graphics.printf("PLAY", golButton.x.min + layout.tab, golButton.y.min + layout.tab, golButton.width, 'left')
    end
    if gameoflife.solid then
-    love.graphics.printf("LIQUID", rainButton.x.min + layout.tab, rainButton.y.min + layout.tab, rainButton.width, 'left')
+    love.graphics.printf("SLIME", rainButton.x.min + layout.tab, rainButton.y.min + layout.tab, rainButton.width, 'left')
   else
-    love.graphics.printf("SOLID", rainButton.x.min + layout.tab, rainButton.y.min + layout.tab, rainButton.width, 'left')
+    love.graphics.printf("ANIMAL", rainButton.x.min + layout.tab, rainButton.y.min + layout.tab, rainButton.width, 'left')
   end
   love.graphics.printf("FPS +", frameUpButton.x.min + layout.tab, frameUpButton.y.min + layout.tab, frameUpButton.width, 'left')
   love.graphics.printf("FPS -", frameDownButton.x.min + layout.tab, frameDownButton.y.min + layout.tab, frameDownButton.width, 'left')
 end
 
-function countNeighbours(address, buttonArray)
+function getAverageColor(index, buttonArray)
+  local colorIndex = 1
+  local averageColor = {}
+  local neighbourIndex = {}
+  local neighbourColors = {}
+  table.insert(neighbourIndex, index)
+  table.insert(neighbourIndex, index + 1)
+  table.insert(neighbourIndex, index - 1)
+  table.insert(neighbourIndex, index + buttonArray.x.resolution)
+  table.insert(neighbourIndex, index + buttonArray.x.resolution - 1)
+  table.insert(neighbourIndex, index + buttonArray.x.resolution + 1)
+  table.insert(neighbourIndex, index - buttonArray.x.resolution)
+  table.insert(neighbourIndex, index - buttonArray.x.resolution - 1)
+  table.insert(neighbourIndex, index - buttonArray.x.resolution + 1)
+  if user.toroid then
+    for i, indec in ipairs(neighbourIndex) do
+      if indec < 0 then
+        indec = indec + buttonArray.pixels.length
+      elseif indec > buttonArray.pixels.length then
+        indec = indec - buttonArray.pixels.length
+      end
+    end
+  end
+  return user.color.active
+end
+
+function countActiveNeighbours(index, buttonArray)
   neighbourIndex = {}
   local neighbours = {}
   local neighbourCount = 0
-  table.insert(neighbourIndex, address + 1)
-  table.insert(neighbourIndex, address - 1)
-  table.insert(neighbourIndex, address + buttonArray.x.resolution)
-  table.insert(neighbourIndex, address + buttonArray.x.resolution - 1)
-  table.insert(neighbourIndex, address + buttonArray.x.resolution + 1)
-  table.insert(neighbourIndex, address - buttonArray.x.resolution)
-  table.insert(neighbourIndex, address - buttonArray.x.resolution - 1)
-  table.insert(neighbourIndex, address - buttonArray.x.resolution + 1)
+  table.insert(neighbourIndex, index + 1)
+  table.insert(neighbourIndex, index - 1)
+  table.insert(neighbourIndex, index + buttonArray.x.resolution)
+  table.insert(neighbourIndex, index + buttonArray.x.resolution - 1)
+  table.insert(neighbourIndex, index + buttonArray.x.resolution + 1)
+  table.insert(neighbourIndex, index - buttonArray.x.resolution)
+  table.insert(neighbourIndex, index - buttonArray.x.resolution - 1)
+  table.insert(neighbourIndex, index - buttonArray.x.resolution + 1)
   if user.toroid then
-    for i, index in ipairs(neighbourIndex) do
-      if index < 0 then
-        index = index + buttonArray.pixels.length
-      elseif index > buttonArray.pixels.length then
-        index = index - buttonArray.pixels.length
+    for i, indec in ipairs(neighbourIndex) do
+      if indec < 0 then
+        indec = indec + buttonArray.pixels.length
+      elseif indec > buttonArray.pixels.length then
+        indec = indec - buttonArray.pixels.length
       end
-      table.insert(neighbours, buttonArray.pixels.buttons[index])
+      table.insert(neighbours, buttonArray.pixels.buttons[indec])
     end
   end
-  local r = 0
-  local g = 0
-  local b = 0
-  local count = {}
   for i, neighbour in ipairs(neighbours) do
     if neighbour.state.current == 1 then
       neighbourCount = neighbourCount + 1
-      r = r + neighbour.color[1]
-      g = g + neighbour.color[2]
-      b = b + neighbour.color[3]
     end
   end
-  r = r + buttonArray.pixels.buttons[address].color[1]
-  g = g + buttonArray.pixels.buttons[address].color[2]
-  b = b + buttonArray.pixels.buttons[address].color[3]
-  r = math.mod(r, 255)
-  g = math.mod(g, 255)
-  b = math.mod(b, 255)
-  if (r == 0 and g == 0 and b == 0) or (r == 255 and g == 255 and b == 255) then
-    r = math.sin(buttonArray.pixels.buttons[address].x.min)*255
-    g = math.cos(buttonArray.pixels.buttons[address].x.min)*255
-    b = buttonArray.pixels.buttons[address].y.min
-  end
-  count.neighbourCount = neighbourCount
-  count.neighbourColor = {r, g, b, 255}
-  return count
+  return neighbourCount
 end
 
 function InverseColor(color)
@@ -280,7 +287,7 @@ function newUser()
   local user = {}
   user.toroid = true
   user.color = {}
-  user.color.active = {100, 250, 100, 255}
+  user.color.active = {255, 255, 255, 255}
   user.color.disactive = {0, 0, 0, 255}
   user.x = 0
   user.y = 0
@@ -303,6 +310,7 @@ function newButton(x, y, height, width, color)
   button.state = {}
   button.state.current = 0
   button.state.future = 0
+  button.visited = false
   return button
 end
 
@@ -322,7 +330,7 @@ function newButtonArray(xResolution, yResolution, type)
     for i = 0, buttonArray.x.resolution - 1 do
       local buttonx = i * buttonArray.pixels.width + type.x.min
       local buttony = j * buttonArray.pixels.height + type.y.min
-          local button = newButton(buttonx, buttony, buttonArray.pixels.height, buttonArray.pixels.width, user.color.disactive)
+          local button = newButton(buttonx, buttony, buttonArray.pixels.height, buttonArray.pixels.width, user.color.active)
           table.insert(buttonArray.pixels.buttons, button)
     end
   end
