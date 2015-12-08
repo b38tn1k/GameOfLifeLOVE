@@ -28,9 +28,9 @@ function love.load()
   guideButton.debounceLatch = 0
   golButton = newButton(layout.tab, guideButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
   golButton.debounceLatch = 0
-  rainButton = newButton(layout.tab, golButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
-  rainButton.debounceLatch = 0
-  frameUpButton = newButton(layout.tab, rainButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
+  solidButton = newButton(layout.tab, golButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
+  solidButton.debounceLatch = 0
+  frameUpButton = newButton(layout.tab, solidButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
   frameUpButton.debounceLatch = 0
   frameDownButton = newButton(layout.tab, frameUpButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
   frameDownButton.debounceLatch = 0
@@ -53,7 +53,7 @@ function love.update(dt)                                              -- UPDATE 
     user.x = love.mouse.getX()
     user.y = love.mouse.getY()
     if love.mouse.isDown('l') then
-      -- DRAW
+      -- DRAW ON CANVAS
       for i, button in ipairs(canvas.pixels.buttons) do               -- run through all pixels in the canvas, looking for mouse. TODO better
         if user.x <= button.x.max and user.y <= button.y.max and user.x >= button.x.min and user.y >= button.y.min then
           button.color = user.color.active
@@ -119,13 +119,13 @@ function love.update(dt)                                              -- UPDATE 
       if guideButton.debounceLatch < session.time then
         guideButton.debounceLatch = session.time
       end
-      -- TOGGLE RAINBUTTON
-      if user.x <= rainButton.x.max and user.y <= rainButton.y.max and user.x >= rainButton.x.min and user.y >= rainButton.y.min and session.time > rainButton.debounceLatch then
+      -- TOGGLE solidButton
+      if (user.x <= solidButton.x.max and user.y <= solidButton.y.max and user.x >= solidButton.x.min and user.y >= solidButton.y.min and session.time > solidButton.debounceLatch) then
         gameoflife.solid = not gameoflife.solid
-        rainButton.debounceLatch = session.time + 0.2
+        solidButton.debounceLatch = session.time + 0.2
       end
-      if rainButton.debounceLatch < session.time then
-        rainButton.debounceLatch = session.time
+      if solidButton.debounceLatch < session.time then
+        solidButton.debounceLatch = session.time
       end
       -- FRAME RATE DOWN
       if user.x <= frameDownButton.x.max and user.y <= frameDownButton.y.max and user.x >= frameDownButton.x.min and user.y >= frameDownButton.y.min and session.time > frameDownButton.debounceLatch then
@@ -139,7 +139,7 @@ function love.update(dt)                                              -- UPDATE 
       end
       -- FRAME RATE UP
       if user.x <= frameUpButton.x.max and user.y <= frameUpButton.y.max and user.x >= frameUpButton.x.min and user.y >= frameUpButton.y.min and session.time > frameUpButton.debounceLatch then
-        if user.fps < 10 then
+        if user.fps < 15 then
           user.fps = user.fps + 0.5
         end
         frameUpButton.debounceLatch = session.time + 0.2
@@ -190,6 +190,13 @@ function love.update(dt)                                              -- UPDATE 
       end
     end
   end
+  if session.time > solidButton.debounceLatch and love.keyboard.isDown('tab') then
+    gameoflife.solid = not gameoflife.solid
+    solidButton.debounceLatch = session.time + 0.2
+  end
+  if solidButton.debounceLatch < session.time then
+    solidButton.debounceLatch = session.time
+  end
 end
 
 function love.draw()                                                  -- DRAW DRAW DRAW
@@ -202,7 +209,7 @@ function love.draw()                                                  -- DRAW DR
     elseif button.state.current == 0 and not button.visited then
       love.graphics.setColor(user.color.disactive)
     end
-    if not gameoflife.solid and button.state.current == 1 then
+    if not gameoflife.solid and button.state.current == 1 and user.fps < 10 then
       love.graphics.setColor(InverseColor(button.color))
     end
     love.graphics.rectangle("fill", button.x.min, button.y.min, button.width, button.height)
@@ -226,9 +233,9 @@ function love.draw()                                                  -- DRAW DR
      love.graphics.printf("PLAY", golButton.x.min + layout.tab, golButton.y.min + layout.tab, golButton.width, 'left')
    end
    if gameoflife.solid then
-    love.graphics.printf("SLIME", rainButton.x.min + layout.tab, rainButton.y.min + layout.tab, rainButton.width, 'left')
+    love.graphics.printf("SLIME", solidButton.x.min + layout.tab, solidButton.y.min + layout.tab, solidButton.width, 'left')
   else
-    love.graphics.printf("ANIMALS", rainButton.x.min + layout.tab, rainButton.y.min + layout.tab, rainButton.width, 'left')
+    love.graphics.printf("ANIMALS", solidButton.x.min + layout.tab, solidButton.y.min + layout.tab, solidButton.width, 'left')
   end
   love.graphics.printf("FASTER", frameUpButton.x.min + layout.tab, frameUpButton.y.min + layout.tab, frameUpButton.width, 'left')
   love.graphics.printf("SLOWER", frameDownButton.x.min + layout.tab, frameDownButton.y.min + layout.tab, frameDownButton.width, 'left')
@@ -333,7 +340,7 @@ function newUser()
   user.y = 0
   user.guides = false
   user.fps = 5
-  user.maxScreenSize = 100
+  user.maxScreenSize = 200
   user.minScreenSize = 10
   user.screenSize = 100
   return user
