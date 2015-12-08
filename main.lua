@@ -1,6 +1,5 @@
 -- Goals
 -- Colors!
--- Set Field Resolution
 -- Set Square / toroid
 -- Set Brush Size
 -- Stroke Interpolation
@@ -15,25 +14,30 @@ function love.load()
   session.time = 0
   love.window.setTitle('um... I had something for this')
   titleFont = love.graphics.newFont(100)
-  bodyFont = love.graphics.newFont(30)
+  bodyFont = love.graphics.newFont(20)
   smallFont = love.graphics.newFont(20)
   layout = newLayout()
   user = newUser()
-  canvas = newButtonArray(100, 100, layout.canvas)
+  canvas = newButtonArray(user.screenSize, user.screenSize, layout.canvas)
   palette = newPalette()
   love.graphics.setBackgroundColor(layout.background.color)
   -- TEXT MENU
-  clearButton = newButton(layout.tab, layout.tab, layout.palette.dim / 5, layout.palette.dim, {255, 255, 255, 255})
-  guideButton = newButton(layout.tab, clearButton.y.max, layout.palette.dim / 5, layout.palette.dim, {255, 255, 255, 255})
+  clearButton = newButton(layout.tab, layout.tab, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
+  clearButton.debounceLatch = 0
+  guideButton = newButton(layout.tab, clearButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
   guideButton.debounceLatch = 0
-  golButton = newButton(layout.tab, guideButton.y.max, layout.palette.dim / 5, layout.palette.dim, {255, 255, 255, 255})
+  golButton = newButton(layout.tab, guideButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
   golButton.debounceLatch = 0
-  rainButton = newButton(layout.tab, golButton.y.max, layout.palette.dim / 5, layout.palette.dim, {255, 255, 255, 255})
+  rainButton = newButton(layout.tab, golButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
   rainButton.debounceLatch = 0
-  frameUpButton = newButton(layout.tab, rainButton.y.max, layout.palette.dim / 5, layout.palette.dim, {255, 255, 255, 255})
+  frameUpButton = newButton(layout.tab, rainButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
   frameUpButton.debounceLatch = 0
-  frameDownButton = newButton(layout.tab, frameUpButton.y.max, layout.palette.dim / 5, layout.palette.dim, {255, 255, 255, 255})
+  frameDownButton = newButton(layout.tab, frameUpButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
   frameDownButton.debounceLatch = 0
+  makeBiggerButton = newButton(layout.tab, frameDownButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
+  makeBiggerButton.debounceLatch = 0
+  makeSmallerButton = newButton(layout.tab, makeBiggerButton.y.max, layout.palette.dim / 8, layout.palette.dim, {255, 255, 255, 255})
+  makeSmallerButton.debounceLatch = 0
   gameoflife = {}
   gameoflife.solid = true
   gameoflife.toggle = false
@@ -54,6 +58,7 @@ function love.update(dt)                                              -- UPDATE 
         if user.x <= button.x.max and user.y <= button.y.max and user.x >= button.x.min and user.y >= button.y.min then
           button.color = user.color.active
           button.state.current = 1
+          button.state.future = 1
           if user.color.active == user.color.disactive then
             button.state.current = 0
             button.state.future = 0
@@ -61,6 +66,23 @@ function love.update(dt)                                              -- UPDATE 
         end
       end
       -- USER CONTROL
+      -- MAKE SCREEN BIGGER
+      if user.x <= makeBiggerButton.x.max and user.y <= makeBiggerButton.y.max and user.x >= makeBiggerButton.x.min and user.y >= makeBiggerButton.y.min and session.time > makeBiggerButton.debounceLatch then
+        makeBiggerButton.debounceLatch = session.time + 0.2
+        if user.screenSize <= user.maxScreenSize then
+          user.screenSize = user.screenSize + 10
+          canvas = {}
+          canvas = newButtonArray(user.screenSize, user.screenSize, layout.canvas)
+        end
+      end
+      if user.x <= makeSmallerButton.x.max and user.y <= makeSmallerButton.y.max and user.x >= makeSmallerButton.x.min and user.y >= makeSmallerButton.y.min and session.time > makeSmallerButton.debounceLatch then
+        makeSmallerButton.debounceLatch = session.time + 0.2
+        if user.screenSize > user.minScreenSize then
+          user.screenSize = user.screenSize - 10
+          canvas = {}
+          canvas = newButtonArray(user.screenSize, user.screenSize, layout.canvas)
+        end
+      end
       -- PALETTE
       for i, button in ipairs(palette.pixels.buttons) do               -- run through all pixels in palette, looking for mouse. TODO better
         if user.x <= button.x.max and user.y <= button.y.max and user.x >= button.x.min and user.y >= button.y.min then
@@ -68,11 +90,25 @@ function love.update(dt)                                              -- UPDATE 
         end
       end
       -- CLEAR SCREEN
-      if user.x <= clearButton.x.max and user.y <= clearButton.y.max and user.x >= clearButton.x.min and user.y >= clearButton.y.min then
+      if user.x <= clearButton.x.max and user.y <= clearButton.y.max and user.x >= clearButton.x.min and user.y >= clearButton.y.min and session.time > clearButton.debounceLatch then
+        clearButton.debounceLatch = session.time + 0.2
+        local randomLatch = true
         for i, button in ipairs(canvas.pixels.buttons) do               -- clear every pixel
+          if button.state.current == 1 then
+            randomLatch = false
+          end
           button.color = user.color.disactive
           button.state.current = 0
           button.state.future = 0
+        end
+        if randomLatch then
+          for i, button in ipairs(canvas.pixels.buttons) do               -- clear every pixel
+            if math.random() > 0.5 then
+              button.color = {255 * math.random(), 255 * math.random(), 255 * math.random(), 255}
+              button.state.current = 1
+              button.state.future = 1
+            end
+          end
         end
       end
       -- TOGGLE VISIBLE GUIDES
@@ -145,7 +181,11 @@ function love.update(dt)                                              -- UPDATE 
         button.state.current = button.state.future
         if button.state.current == 1 then
           button.visited = true
-          button.color = user.color.active
+          if gameoflife.solid then
+            button.color = user.color.active
+          else
+            button.color  = {255*math.sin(session.time / 20), 255*math.cos(session.time / 20),(255 - 255*math.sin(session.time / 20) + 0.5),255}
+          end
         end
       end
     end
@@ -163,13 +203,11 @@ function love.draw()                                                  -- DRAW DR
       love.graphics.setColor(user.color.disactive)
     end
     if not gameoflife.solid and button.state.current == 1 then
-      button.color  = {255*math.sin(session.time / 20), 255*math.cos(session.time / 20),(255 - 255*math.sin(session.time / 20) + 0.5),255}
-      love.graphics.setColor(button.color)
       love.graphics.setColor(InverseColor(button.color))
     end
     love.graphics.rectangle("fill", button.x.min, button.y.min, button.width, button.height)
     if user.guides then                                               -- Add little dots to show square placement
-      love.graphics.setColor(InverseColor(button.color))
+      love.graphics.setColor(user.color.active)
       love.graphics.rectangle("fill", button.x.min, button.y.min, 1, 1)
     end
   end
@@ -190,10 +228,12 @@ function love.draw()                                                  -- DRAW DR
    if gameoflife.solid then
     love.graphics.printf("SLIME", rainButton.x.min + layout.tab, rainButton.y.min + layout.tab, rainButton.width, 'left')
   else
-    love.graphics.printf("ANIMAL", rainButton.x.min + layout.tab, rainButton.y.min + layout.tab, rainButton.width, 'left')
+    love.graphics.printf("ANIMALS", rainButton.x.min + layout.tab, rainButton.y.min + layout.tab, rainButton.width, 'left')
   end
-  love.graphics.printf("FPS +", frameUpButton.x.min + layout.tab, frameUpButton.y.min + layout.tab, frameUpButton.width, 'left')
-  love.graphics.printf("FPS -", frameDownButton.x.min + layout.tab, frameDownButton.y.min + layout.tab, frameDownButton.width, 'left')
+  love.graphics.printf("FASTER", frameUpButton.x.min + layout.tab, frameUpButton.y.min + layout.tab, frameUpButton.width, 'left')
+  love.graphics.printf("SLOWER", frameDownButton.x.min + layout.tab, frameDownButton.y.min + layout.tab, frameDownButton.width, 'left')
+  love.graphics.printf("SMALLER", makeBiggerButton.x.min + layout.tab, makeBiggerButton.y.min + layout.tab, makeBiggerButton.width, 'left')
+  love.graphics.printf("BIGGER", makeSmallerButton.x.min + layout.tab, makeSmallerButton.y.min + layout.tab, makeSmallerButton.width, 'left')
 end
 
 function getAverageColor(index, buttonArray)
@@ -293,12 +333,18 @@ function newUser()
   user.y = 0
   user.guides = false
   user.fps = 5
+  user.maxScreenSize = 100
+  user.minScreenSize = 10
+  user.screenSize = 100
   return user
 end
 
 function newButton(x, y, height, width, color)
   local button = {}
   button.color = color
+  button.inherit = {}
+  button.inherit.currentColor = color
+  button.inherit.futureColor = color
   button.width = width
   button.height = height
   button.x = {}
