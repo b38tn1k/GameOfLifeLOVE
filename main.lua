@@ -189,7 +189,8 @@ function love.update(dt)                                              -- UPDATE 
           if gameoflife.solid then
             button.color = colorLatch[i]
           else
-            button.color  = {255*math.sin(session.time / 20), 255*math.cos(session.time / 20),(255 - 255*math.sin(session.time / 20) + 0.5),255}
+            -- button.color  = {255*math.sin(session.time / 20), 255*math.cos(session.time / 20),(255 - 255*math.sin(session.time / 20) + 0.5),255}
+            button.color = colorLatch[i]
           end
         end
       end
