@@ -6,8 +6,9 @@
 -- Presets / Load / Save
 
 function love.load()
-  math.randomseed(os.time())                                                -- LOAD LOAD LOAD
+  math.randomseed(os.time())                                            -- LOAD LOAD LOAD
   debug = true                                                        -- this time I am logging everything
+  colorLatch = {}   --HACK
   SCREEN = {}                                                         -- dont change these things... yet
   SCREEN.WIDTH, SCREEN.HEIGHT, SCREEN.FLAGS = love.window.getMode()
   session = {}
@@ -53,7 +54,7 @@ function love.update(dt)                                              -- UPDATE 
     user.x = love.mouse.getX()
     user.y = love.mouse.getY()
     if love.mouse.isDown('l') then
-      -- DRAW ON CANVAS
+      -- LET USER DRAW ON CANVAS. NEEDS IMPROVING / STROKE INTERPOLATION (?)
       for i, button in ipairs(canvas.pixels.buttons) do               -- run through all pixels in the canvas, looking for mouse. TODO better
         if user.x <= button.x.max and user.y <= button.y.max and user.x >= button.x.min and user.y >= button.y.min then
           button.color = user.color.active
@@ -75,6 +76,7 @@ function love.update(dt)                                              -- UPDATE 
           canvas = newButtonArray(user.screenSize, user.screenSize, layout.canvas)
         end
       end
+      -- MAKE SCREEN SMALLER
       if user.x <= makeSmallerButton.x.max and user.y <= makeSmallerButton.y.max and user.x >= makeSmallerButton.x.min and user.y >= makeSmallerButton.y.min and session.time > makeSmallerButton.debounceLatch then
         makeSmallerButton.debounceLatch = session.time + 0.2
         if user.screenSize > user.minScreenSize then
@@ -166,7 +168,10 @@ function love.update(dt)                                              -- UPDATE 
       gameoflife.update = session.time + 1/user.fps
       -- GAME OF LIFE LOGIC
       for i, button in ipairs(canvas.pixels.buttons) do
-        local neighbourCount = countActiveNeighbours(i, canvas)
+        -- COUNT NEIGHBOURS
+        local neighbourCount, buttonColor = countActiveNeighbours(i, canvas)
+        table.insert(colorLatch, buttonColor)   --HACK
+        -- APPLY GOL
         if button.state.current == 1 and neighbourCount < 2 then
           button.state.future = 0
         elseif button.state.current == 1 and neighbourCount > 3 then
@@ -176,20 +181,22 @@ function love.update(dt)                                              -- UPDATE 
           button.state.future = 1
         end
       end
-      -- UPDATE CELL STATES
+      -- UPDATE CELL STATES (CURRENT -> FUTURE)
       for i, button in ipairs(canvas.pixels.buttons) do
         button.state.current = button.state.future
         if button.state.current == 1 then
           button.visited = true
           if gameoflife.solid then
-            button.color = user.color.active
+            button.color = colorLatch[i]
           else
             button.color  = {255*math.sin(session.time / 20), 255*math.cos(session.time / 20),(255 - 255*math.sin(session.time / 20) + 0.5),255}
           end
         end
       end
+      colorLatch = {}
     end
   end
+  --- SLIME ANIMAL SWITCH
   if session.time > solidButton.debounceLatch and love.keyboard.isDown('tab') then
     gameoflife.solid = not gameoflife.solid
     solidButton.debounceLatch = session.time + 0.2
@@ -243,34 +250,9 @@ function love.draw()                                                  -- DRAW DR
   love.graphics.printf("BIGGER", makeSmallerButton.x.min + layout.tab, makeSmallerButton.y.min + layout.tab, makeSmallerButton.width, 'left')
 end
 
-function getAverageColor(index, buttonArray)
-  local colorIndex = 1
-  local averageColor = {}
-  local neighbourIndex = {}
-  local neighbourColors = {}
-  table.insert(neighbourIndex, index)
-  table.insert(neighbourIndex, index + 1)
-  table.insert(neighbourIndex, index - 1)
-  table.insert(neighbourIndex, index + buttonArray.x.resolution)
-  table.insert(neighbourIndex, index + buttonArray.x.resolution - 1)
-  table.insert(neighbourIndex, index + buttonArray.x.resolution + 1)
-  table.insert(neighbourIndex, index - buttonArray.x.resolution)
-  table.insert(neighbourIndex, index - buttonArray.x.resolution - 1)
-  table.insert(neighbourIndex, index - buttonArray.x.resolution + 1)
-  if user.toroid then
-    for i, indec in ipairs(neighbourIndex) do
-      if indec < 0 then
-        indec = indec + buttonArray.pixels.length
-      elseif indec > buttonArray.pixels.length then
-        indec = indec - buttonArray.pixels.length
-      end
-    end
-  end
-  return user.color.active
-end
-
 function countActiveNeighbours(index, buttonArray)
   neighbourIndex = {}
+  local newColor = {}
   local neighbours = {}
   local neighbourCount = 0
   table.insert(neighbourIndex, index + 1)
@@ -294,9 +276,10 @@ function countActiveNeighbours(index, buttonArray)
   for i, neighbour in ipairs(neighbours) do
     if neighbour.state.current == 1 then
       neighbourCount = neighbourCount + 1
+      newColor = neighbour.color    -- HACK
     end
   end
-  return neighbourCount
+  return neighbourCount, newColor
 end
 
 function InverseColor(color)
