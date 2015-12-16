@@ -1,1 +1,2 @@
-A game of life type thing...
+A game of life
+![screenshot](https://github.com/jamesrobertcarthew/GameOfLifeLOVE/blob/master/Untitled.png)
