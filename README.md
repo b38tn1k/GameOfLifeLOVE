@@ -1,4 +1,5 @@
-# A Game of Life implementation using [LOVE](https://love2d.org/) in Lua
+# A Game of Life
+Created with [LOVE](https://love2d.org/) in Lua
 
 
 My version uses multiple colors and provides two modes:
