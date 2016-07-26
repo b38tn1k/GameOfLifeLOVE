@@ -1,5 +1,5 @@
 # A Game of Life
-Created with [LOVE](https://love2d.org/) in Lua
+Created with [LOVE](https://love2d.org/) 0.9.0
 
 
 My version uses multiple colors and provides two modes:
